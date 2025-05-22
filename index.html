@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Party - Watch Together</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom styles that can't be done with Tailwind */
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            height: 0;
+            overflow: hidden;
+        }
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+        }
+        .progress-bar {
+            height: 5px;
+            background-color: #4f46e5;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+    <!-- Header -->
+    <header class="bg-gray-800 py-4 px-6 flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-indigo-500">Movie Party</h1>
+        <div class="flex space-x-4">
+            <button id="uploadBtn" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">Upload Movie</button>
+            <button id="createPartyBtn" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">Create Party</button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Party Section (hidden by default) -->
+        <div id="partySection" class="hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Video Player -->
+                <div class="lg:col-span-2">
+                    <div class="video-container bg-black rounded-lg">
+                        <video id="partyVideo" controls class="w-full">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                    <div class="progress-bar"></div>
+                    <div class="flex justify-between items-center mt-2">
+                        <span id="currentTime">00:00:00</span>
+                        <span id="duration">00:00:00</span>
+                    </div>
+                    <div class="flex space-x-4 mt-4">
+                        <button id="playPauseBtn" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">
+                            <i class="fas fa-play"></i> Play
+                        </button>
+                        <button id="syncBtn" class="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded">
+                            <i class="fas fa-sync-alt"></i> Sync
+                        </button>
+                        <button id="leavePartyBtn" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded">
+                            <i class="fas fa-sign-out-alt"></i> Leave Party
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Chat Section -->
+                <div class="bg-gray-800 rounded-lg p-4">
+                    <h3 class="text-xl font-semibold mb-4">Party Chat</h3>
+                    <div id="chatMessages" class="chat-messages mb-4 space-y-2"></div>
+                    <div class="flex">
+                        <input id="chatInput" type="text" placeholder="Type your message..." 
+                               class="flex-grow bg-gray-700 rounded-l px-4 py-2 focus:outline-none">
+                        <button id="sendMessageBtn" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-r">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Party Info -->
+            <div id="partyInfo" class="mt-6 bg-gray-800 rounded-lg p-4">
+                <h3 class="text-xl font-semibold mb-2">Party Information</h3>
+                <p>Party ID: <span id="partyId" class="font-mono">N/A</span></p>
+                <p>Members: <span id="partyMembers">1</span></p>
+                <p>Movie: <span id="partyMovie">None</span></p>
+                <div class="mt-2">
+                    <label for="inviteLink" class="block text-sm font-medium">Invite Link:</label>
+                    <div class="flex">
+                        <input id="inviteLink" type="text" readonly 
+                               class="flex-grow bg-gray-700 rounded-l px-4 py-2 focus:outline-none">
+                        <button id="copyInviteBtn" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-r">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Join Party Modal -->
+        <div id="joinPartyModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+            <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-xl font-semibold mb-4">Join a Party</h3>
+                <div class="mb-4">
+                    <label for="partyCode" class="block text-sm font-medium mb-2">Party Code:</label>
+                    <input id="partyCode" type="text" placeholder="Enter party code" 
+                           class="w-full bg-gray-700 rounded px-4 py-2 focus:outline-none">
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button id="cancelJoinBtn" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded">Cancel</button>
+                    <button id="confirmJoinBtn" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">Join</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Party Modal -->
+        <div id="createPartyModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+            <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-xl font-semibold mb-4">Create a Party</h3>
+                <div class="mb-4">
+                    <label for="partyName" class="block text-sm font-medium mb-2">Party Name:</label>
+                    <input id="partyName" type="text" placeholder="My Awesome Party" 
+                           class="w-full bg-gray-700 rounded px-4 py-2 focus:outline-none">
+                </div>
+                <div class="mb-4">
+                    <label for="selectMovie" class="block text-sm font-medium mb-2">Select Movie:</label>
+                    <select id="selectMovie" class="w-full bg-gray-700 rounded px-4 py-2 focus:outline-none">
+                        <option value="">Select a movie</option>
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button id="cancelCreateBtn" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded">Cancel</button>
+                    <button id="confirmCreateBtn" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">Create</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Movie Modal -->
+        <div id="uploadModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+            <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-xl font-semibold mb-4">Upload a Movie</h3>
+                <div class="mb-4">
+                    <label for="movieTitle" class="block text-sm font-medium mb-2">Movie Title:</label>
+                    <input id="movieTitle" type="text" placeholder="Movie title" 
+                           class="w-full bg-gray-700 rounded px-4 py-2 focus:outline-none">
+                </div>
+                <div class="mb-4">
+                    <label for="movieFile" class="block text-sm font-medium mb-2">Movie File:</label>
+                    <input id="movieFile" type="file" accept="video/*" 
+                           class="w-full bg-gray-700 rounded px-4 py-2 focus:outline-none">
+                </div>
+                <div class="mb-4">
+                    <label for="movieThumbnail" class="block text-sm font-medium mb-2">Thumbnail (optional):</label>
+                    <input id="movieThumbnail" type="file" accept="image/*" 
+                           class="w-full bg-gray-700 rounded px-4 py-2 focus:outline-none">
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button id="cancelUploadBtn" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded">Cancel</button>
+                    <button id="confirmUploadBtn" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">Upload</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Home Content (shown when not in a party) -->
+        <div id="homeContent" class="text-center py-12">
+            <h2 class="text-3xl font-bold mb-6">Watch Movies Together in Sync</h2>
+            <p class="text-xl mb-8">Create or join a watch party to enjoy movies with friends in real-time.</p>
+            <div class="flex justify-center space-x-4">
+                <button id="joinPartyBtn" class="bg-indigo-600 hover:bg-indigo-700 px-6 py-3 rounded-lg text-lg">
+                    <i class="fas fa-user-plus mr-2"></i> Join Party
+                </button>
+                <button id="createPartyBtn2" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg text-lg">
+                    <i class="fas fa-plus mr-2"></i> Create Party
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 py-6 px-6 text-center">
+        <p>© 2023 Movie Party. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // DOM Elements
+        const partySection = document.getElementById('partySection');
+        const homeContent = document.getElementById('homeContent');
+        const joinPartyModal = document.getElementById('joinPartyModal');
+        const createPartyModal = document.getElementById('createPartyModal');
+        const uploadModal = document.getElementById('uploadModal');
+        const partyVideo = document.getElementById('partyVideo');
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendMessageBtn = document.getElementById('sendMessageBtn');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const syncBtn = document.getElementById('syncBtn');
+        const leavePartyBtn = document.getElementById('leavePartyBtn');
+        const currentTime = document.getElementById('currentTime');
+        const duration = document.getElementById('duration');
+        const partyId = document.getElementById('partyId');
+        const partyMembers = document.getElementById('partyMembers');
+        const partyMovie = document.getElementById('partyMovie');
+        const inviteLink = document.getElementById('inviteLink');
+        const copyInviteBtn = document.getElementById('copyInviteBtn');
+        const progressBar = document.querySelector('.progress-bar');
+
+        // Modal buttons
+        const uploadBtn = document.getElementById('uploadBtn');
+        const createPartyBtn = document.getElementById('createPartyBtn');
+        const createPartyBtn2 = document.getElementById('createPartyBtn2');
+        const joinPartyBtn = document.getElementById('joinPartyBtn');
+        const cancelJoinBtn = document.getElementById('cancelJoinBtn');
+        const confirmJoinBtn = document.getElementById('confirmJoinBtn');
+        const cancelCreateBtn = document.getElementById('cancelCreateBtn');
+        const confirmCreateBtn = document.getElementById('confirmCreateBtn');
+        const cancelUploadBtn = document.getElementById('cancelUploadBtn');
+        const confirmUploadBtn = document.getElementById('confirmUploadBtn');
+
+        // Form inputs
+        const partyCode = document.getElementById('partyCode');
+        const partyName = document.getElementById('partyName');
+        const selectMovie = document.getElementById('selectMovie');
+        const movieTitle = document.getElementById('movieTitle');
+        const movieFile = document.getElementById('movieFile');
+        const movieThumbnail = document.getElementById('movieThumbnail');
+
+        // State
+        let currentParty = null;
+        let isHost = false;
+        let members = [];
+        let movies = [];
+        let socket = null;
+        let videoInterval = null;
+
+        // Mock data for movies (in a real app, this would come from a database)
+        const mockMovies = [
+            { id: '1', title: 'Inception', url: 'https://example.com/videos/inception.mp4', thumbnail: 'https://example.com/thumbnails/inception.jpg' },
+            { id: '2', title: 'The Shawshank Redemption', url: 'https://example.com/videos/shawshank.mp4', thumbnail: 'https://example.com/thumbnails/shawshank.jpg' },
+            { id: '3', title: 'Pulp Fiction', url: 'https://example.com/videos/pulp.mp4', thumbnail: 'https://example.com/thumbnails/pulp.jpg' }
+        ];
+
+        // Initialize the app
+        function init() {
+            // Load movies from localStorage or use mock data
+            const storedMovies = localStorage.getItem('movies');
+            movies = storedMovies ? JSON.parse(storedMovies) : mockMovies;
+            
+            // Populate movie select dropdown
+            updateMovieSelect();
+
+            // Check if we're rejoining a party from localStorage
+            const storedParty = localStorage.getItem('currentParty');
+            if (storedParty) {
+                joinParty(JSON.parse(storedParty));
+            }
+
+            // Set up event listeners
+            setupEventListeners();
+        }
+
+        // Set up all event listeners
+        function setupEventListeners() {
+            // Button clicks
+            uploadBtn.addEventListener('click', () => uploadModal.classList.remove('hidden'));
+            createPartyBtn.addEventListener('click', () => createPartyModal.classList.remove('hidden'));
+            createPartyBtn2.addEventListener('click', () => createPartyModal.classList.remove('hidden'));
+            joinPartyBtn.addEventListener('click', () => joinPartyModal.classList.remove('hidden'));
+            
+            // Modal buttons
+            cancelJoinBtn.addEventListener('click', () => joinPartyModal.classList.add('hidden'));
+            confirmJoinBtn.addEventListener('click', handleJoinParty);
+            cancelCreateBtn.addEventListener('click', () => createPartyModal.classList.add('hidden'));
+            confirmCreateBtn.addEventListener('click', handleCreateParty);
+            cancelUploadBtn.addEventListener('click', () => uploadModal.classList.add('hidden'));
+            confirmUploadBtn.addEventListener('click', handleUploadMovie);
+            
+            // Party controls
+            playPauseBtn.addEventListener('click', togglePlayPause);
+            syncBtn.addEventListener('click', syncVideo);
+            leavePartyBtn.addEventListener('click', leaveParty);
+            copyInviteBtn.addEventListener('click', copyInviteLink);
+            
+            // Chat
+            sendMessageBtn.addEventListener('click', sendMessage);
+            chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendMessage();
+            });
+            
+            // Video events
+            partyVideo.addEventListener('play', handleVideoPlay);
+            partyVideo.addEventListener('pause', handleVideoPause);
+            partyVideo.addEventListener('timeupdate', updateVideoProgress);
+            partyVideo.addEventListener('loadedmetadata', updateVideoDuration);
+        }
+
+        // Update movie select dropdown
+        function updateMovieSelect() {
+            selectMovie.innerHTML = '<option value="">Select a movie</option>';
+            movies.forEach(movie => {
+                const option = document.createElement('option');
+                option.value = movie.id;
+                option.textContent = movie.title;
+                selectMovie.appendChild(option);
+            });
+        }
+
+        // Handle joining a party
+        function handleJoinParty() {
+            const code = partyCode.value.trim();
+            if (!code) {
+                alert('Please enter a party code');
+                return;
+            }
+            
+            // In a real app, this would connect to a server to validate the party code
+            // For this demo, we'll just create a mock party
+            const mockParty = {
+                id: code,
+                name: "Demo Party",
+                movie: movies[0],
+                members: [{ id: 'user1', name: 'You' }]
+            };
+            
+            joinParty(mockParty);
+            joinPartyModal.classList.add('hidden');
+            partyCode.value = '';
+        }
+
+        // Handle creating a party
+        function handleCreateParty() {
+            const name = partyName.value.trim();
+            const movieId = selectMovie.value;
+            
+            if (!name) {
+                alert('Please enter a party name');
+                return;
+            }
+            
+            if (!movieId) {
+                alert('Please select a movie');
+                return;
+            }
+            
+            const selectedMovie = movies.find(m => m.id === movieId);
+            
+            // Generate a random party ID
+            const partyId = 'party-' + Math.random().toString(36).substr(2, 8);
+            
+            // In a real app, this would create a party on the server
+            const newParty = {
+                id: partyId,
+                name: name,
+                movie: selectedMovie,
+                members: [{ id: 'user1', name: 'You (Host)' }],
+                isHost: true
+            };
+            
+            joinParty(newParty);
+            createPartyModal.classList.add('hidden');
+            partyName.value = '';
+            selectMovie.value = '';
+        }
+
+        // Handle uploading a movie
+        function handleUploadMovie() {
+            const title = movieTitle.value.trim();
+            const file = movieFile.files[0];
+            
+            if (!title) {
+                alert('Please enter a movie title');
+                return;
+            }
+            
+            if (!file) {
+                alert('Please select a movie file');
+                return;
+            }
+            
+            // In a real app, this would upload to a server
+            // For this demo, we'll just create a mock movie entry
+            const newMovie = {
+                id: 'movie-' + Math.random().toString(36).substr(2, 8),
+                title: title,
+                url: URL.createObjectURL(file),
+                thumbnail: movieThumbnail.files[0] ? URL.createObjectURL(movieThumbnail.files[0]) : ''
+            };
+            
+            movies.push(newMovie);
+            localStorage.setItem('movies', JSON.stringify(movies));
+            updateMovieSelect();
+            
+            uploadModal.classList.add('hidden');
+            movieTitle.value = '';
+            movieFile.value = '';
+            movieThumbnail.value = '';
+            
+            alert('Movie uploaded successfully!');
+        }
+
+        // Join a party
+        function joinParty(party) {
+            currentParty = party;
+            isHost = party.isHost || false;
+            members = party.members || [];
+            
+            // Save to localStorage to allow rejoining
+            localStorage.setItem('currentParty', JSON.stringify(party));
+            
+            // Update UI
+            partySection.classList.remove('hidden');
+            homeContent.classList.add('hidden');
+            
+            partyId.textContent = party.id;
+            partyMembers.textContent = members.length;
+            partyMovie.textContent = party.movie.title;
+            
+            // Set up the video
+            partyVideo.src = party.movie.url;
+            partyVideo.load();
+            
+            // Set up the invite link
+            inviteLink.value = `${window.location.origin}?party=${party.id}`;
+            
+            // Connect to WebSocket for real-time communication
+            connectWebSocket();
+            
+            // Start syncing video state
+            startVideoSync();
+        }
+
+        // Connect to WebSocket
+        function connectWebSocket() {
+            // In a real app, this would connect to your WebSocket server
+            // For this demo, we'll mock the WebSocket functionality
+            
+            // Mock WebSocket events
+            socket = {
+                send: (data) => {
+                    console.log('WebSocket send:', data);
+                    // In a real app, this would send data to the server
+                },
+                close: () => {
+                    console.log('WebSocket closed');
+                }
+            };
+            
+            // Simulate receiving messages
+            setInterval(() => {
+                if (Math.random() > 0.7) {
+                    const mockMessages = [
+                        { type: 'chat', user: 'Friend1', message: 'This movie is awesome!' },
+                        { type: 'chat', user: 'Friend2', message: 'I love this scene!' },
+                        { type: 'sync', time: partyVideo.currentTime + 0.5 }
+                    ];
+                    
+                    const randomMessage = mockMessages[Math.floor(Math.random() * mockMessages.length)];
+                    handleSocketMessage({ data: JSON.stringify(randomMessage) });
+                }
+            }, 5000);
+        }
+
+        // Handle WebSocket messages
+        function handleSocketMessage(event) {
+            const data = JSON.parse(event.data);
+            
+            switch (data.type) {
+                case 'chat':
+                    addChatMessage(data.user, data.message);
+                    break;
+                    
+                case 'sync':
+                    if (!isHost) {
+                        partyVideo.currentTime = data.time;
+                    }
+                    break;
+                    
+                case 'play':
+                    if (!isHost) {
+                        partyVideo.play();
+                    }
+                    break;
+                    
+                case 'pause':
+                    if (!isHost) {
+                        partyVideo.pause();
+                    }
+                    break;
+                    
+                case 'members':
+                    members = data.members;
+                    partyMembers.textContent = members.length;
+                    break;
+            }
+        }
+
+        // Start syncing video state
+        function startVideoSync() {
+            if (videoInterval) clearInterval(videoInterval);
+            
+            videoInterval = setInterval(() => {
+                if (isHost && partyVideo.readyState > 0) {
+                    // In a real app, this would send the current time to the server
+                    socket.send(JSON.stringify({
+                        type: 'sync',
+                        time: partyVideo.currentTime
+                    }));
+                }
+            }, 1000);
+        }
+
+        // Toggle play/pause
+        function togglePlayPause() {
+            if (partyVideo.paused) {
+                partyVideo.play();
+                if (isHost) {
+                    socket.send(JSON.stringify({ type: 'play' }));
+                }
+            } else {
+                partyVideo.pause();
+                if (isHost) {
+                    socket.send(JSON.stringify({ type: 'pause' }));
+                }
+            }
+        }
+
+        // Sync video with host
+        function syncVideo() {
+            if (!isHost) {
+                // In a real app, this would request the current time from the host
+                socket.send(JSON.stringify({ type: 'requestSync' }));
+                alert('Video synced with host');
+            } else {
+                alert('You are the host, others will sync with you');
+            }
+        }
+
+        // Handle video play event
+        function handleVideoPlay() {
+            playPauseBtn.innerHTML = '<i class="fas fa-pause"></i> Pause';
+        }
+
+        // Handle video pause event
+        function handleVideoPause() {
+            playPauseBtn.innerHTML = '<i class="fas fa-play"></i> Play';
+        }
+
+        // Update video progress
+        function updateVideoProgress() {
+            const percent = (partyVideo.currentTime / partyVideo.duration) * 100;
+            progressBar.style.width = `${percent}%`;
+            
+            // Update current time display
+            currentTime.textContent = formatTime(partyVideo.currentTime);
+        }
+
+        // Update video duration
+        function updateVideoDuration() {
+            duration.textContent = formatTime(partyVideo.duration);
+        }
+
+        // Format time as HH:MM:SS
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            
+            return [
+                h.toString().padStart(2, '0'),
+                m.toString().padStart(2, '0'),
+                s.toString().padStart(2, '0')
+            ].join(':');
+        }
+
+        // Send chat message
+        function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+            
+            // In a real app, this would send the message to the server
+            socket.send(JSON.stringify({
+                type: 'chat',
+                user: 'You',
+                message: message
+            }));
+            
+            // Add to local chat
+            addChatMessage('You', message);
+            chatInput.value = '';
+        }
+
+        // Add chat message to UI
+        function addChatMessage(user, message) {
+            const messageElement = document.createElement('div');
+            messageElement.className = 'bg-gray-700 p-2 rounded';
+            messageElement.innerHTML = `
+                <strong class="text-indigo-400">${user}:</strong> ${message}
+            `;
+            chatMessages.appendChild(messageElement);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Copy invite link
+        function copyInviteLink() {
+            inviteLink.select();
+            document.execCommand('copy');
+            alert('Invite link copied to clipboard!');
+        }
+
+        // Leave party
+        function leaveParty() {
+            if (confirm('Are you sure you want to leave the party?')) {
+                // In a real app, this would notify the server
+                if (socket) socket.close();
+                
+                // Clear interval
+                if (videoInterval) clearInterval(videoInterval);
+                
+                // Reset video
+                partyVideo.pause();
+                partyVideo.src = '';
+                
+                // Clear state
+                currentParty = null;
+                isHost = false;
+                members = [];
+                
+                // Remove from localStorage
+                localStorage.removeItem('currentParty');
+                
+                // Update UI
+                partySection.classList.add('hidden');
+                homeContent.classList.remove('hidden');
+                chatMessages.innerHTML = '';
+            }
+        }
+
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
