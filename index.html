@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Watch Party | HD Today TV</title>
+    <!-- Add Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
@@ -21,6 +24,29 @@
             }
         }
     </script>
+    <script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyBBc97j-iMKBxyfW_hPMHG0vGNEb2XJojk",
+    authDomain: "moma-e53c2.firebaseapp.com",
+    projectId: "moma-e53c2",
+    storageBucket: "moma-e53c2.firebasestorage.app",
+    messagingSenderId: "278497066051",
+    appId: "1:278497066051:web:f53e04016be4939c2ea8f6",
+    measurementId: "G-S9VX6GDT6M"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
     <style>
         .video-container {
             position: relative;
@@ -222,102 +248,93 @@
     <script>
         // Enhanced Database functions
         const DB = {
-            init: function() {
-                if (!localStorage.getItem('watchParties')) {
-                    localStorage.setItem('watchParties', JSON.stringify([]));
-                }
-                if (!localStorage.getItem('videoLibrary')) {
-                    localStorage.setItem('videoLibrary', JSON.stringify([]));
-                }
-                if (!localStorage.getItem('recentParties')) {
-                    localStorage.setItem('recentParties', JSON.stringify([]));
-                }
-                if (!localStorage.getItem('hdTodaySession')) {
-                    localStorage.setItem('hdTodaySession', JSON.stringify({
-                        lastSelectedUrl: '',
-                        lastSelectedTitle: ''
-                    }));
-                }
-            },
-            
-            createParty: function(partyData) {
-                const parties = JSON.parse(localStorage.getItem('watchParties'));
-                parties.push(partyData);
-                localStorage.setItem('watchParties', JSON.stringify(parties));
-                
+    init: function() {
+        // No initialization needed for Firebase
+        return Promise.resolve();
+    },
+    
+    createParty: function(partyData) {
+        return database.ref('watchParties/' + partyData.id).set(partyData)
+            .then(() => {
                 // Add to recent parties
-                const recentParties = JSON.parse(localStorage.getItem('recentParties'));
-                recentParties.unshift({
-                    id: partyData.id,
-                    name: partyData.name,
-                    host: partyData.host,
-                    videoUrl: partyData.videoUrl,
-                    videoTitle: partyData.videoTitle,
-                    timestamp: new Date().toISOString()
+                return database.ref('recentParties').transaction((currentParties = []) => {
+                    const newParties = [{
+                        id: partyData.id,
+                        name: partyData.name,
+                        host: partyData.host,
+                        videoUrl: partyData.videoUrl,
+                        videoTitle: partyData.videoTitle,
+                        timestamp: new Date().toISOString()
+                    }, ...currentParties];
+                    
+                    // Keep only last 6 parties
+                    return newParties.slice(0, 6);
                 });
-                
-                // Keep only last 6 parties
-                if (recentParties.length > 6) {
-                    recentParties.pop();
-                }
-                
-                localStorage.setItem('recentParties', JSON.stringify(recentParties));
-                return partyData;
-            },
-            
-            getParty: function(partyId) {
-                const parties = JSON.parse(localStorage.getItem('watchParties'));
-                return parties.find(party => party.id === partyId);
-            },
-            
-            updateParty: function(partyId, updatedData) {
-                const parties = JSON.parse(localStorage.getItem('watchParties'));
-                const index = parties.findIndex(party => party.id === partyId);
-                if (index !== -1) {
-                    parties[index] = { ...parties[index], ...updatedData };
-                    localStorage.setItem('watchParties', JSON.stringify(parties));
-                    return true;
-                }
-                return false;
-            },
-            
-            addToLibrary: function(videoData) {
-                const library = JSON.parse(localStorage.getItem('videoLibrary'));
+            })
+            .then(() => partyData);
+    },
+    
+    getParty: function(partyId) {
+        return database.ref('watchParties/' + partyId).once('value')
+            .then(snapshot => snapshot.val());
+    },
+    
+    updateParty: function(partyId, updatedData) {
+        return database.ref('watchParties/' + partyId).update(updatedData)
+            .then(() => true)
+            .catch(() => false);
+    },
+    
+    addToLibrary: function(videoData, userId) {
+        return database.ref('videoLibrary/' + userId).once('value')
+            .then(snapshot => {
+                const library = snapshot.val() || [];
                 const exists = library.some(item => item.url === videoData.url);
+                
                 if (!exists) {
                     library.push(videoData);
-                    localStorage.setItem('videoLibrary', JSON.stringify(library));
-                    return true;
+                    return database.ref('videoLibrary/' + userId).set(library)
+                        .then(() => true);
                 }
                 return false;
-            },
-            
-            getLibrary: function() {
-                return JSON.parse(localStorage.getItem('videoLibrary'));
-            },
-            
-            removeFromLibrary: function(index) {
-                const library = JSON.parse(localStorage.getItem('videoLibrary'));
+            });
+    },
+    
+    getLibrary: function(userId) {
+        return database.ref('videoLibrary/' + userId).once('value')
+            .then(snapshot => snapshot.val() || []);
+    },
+    
+    removeFromLibrary: function(index, userId) {
+        return database.ref('videoLibrary/' + userId).once('value')
+            .then(snapshot => {
+                const library = snapshot.val() || [];
                 if (index >= 0 && index < library.length) {
                     library.splice(index, 1);
-                    localStorage.setItem('videoLibrary', JSON.stringify(library));
-                    return true;
+                    return database.ref('videoLibrary/' + userId).set(library)
+                        .then(() => true);
                 }
                 return false;
-            },
-            
-            getRecentParties: function() {
-                return JSON.parse(localStorage.getItem('recentParties'));
-            },
-            
-            setHdTodaySession: function(data) {
-                localStorage.setItem('hdTodaySession', JSON.stringify(data));
-            },
-            
-            getHdTodaySession: function() {
-                return JSON.parse(localStorage.getItem('hdTodaySession'));
-            }
-        };
+            });
+    },
+    
+    getRecentParties: function() {
+        return database.ref('recentParties').once('value')
+            .then(snapshot => snapshot.val() || []);
+    },
+    
+    setHdTodaySession: function(data, userId) {
+        return database.ref('hdTodaySession/' + userId).set(data);
+    },
+    
+    getHdTodaySession: function(userId) {
+        return database.ref('hdTodaySession/' + userId).once('value')
+            .then(snapshot => snapshot.val() || {
+                lastSelectedUrl: '',
+                lastSelectedTitle: ''
+            });
+    }
+};
         
         // Enhanced Utility functions
         const Utils = {
@@ -373,469 +390,178 @@
         
         // Enhanced App state
         const AppState = {
-            currentParty: null,
-            currentUser: null,
-            isHost: false,
-            syncInterval: null,
+    currentParty: null,
+    currentUser: null,
+    userId: null, // Add Firebase user ID
+    isHost: false,
+    syncInterval: null,
+    partyListener: null, // For real-time updates
+    
+    init: function() {
+        // Initialize Firebase auth (you'll need to implement this)
+        this.initAuth().then(() => {
+            return DB.init();
+        }).then(() => {
+            this.loadRecentParties();
+            this.loadLibrary();
+            this.setupEventListeners();
+            this.checkForReturningUser();
+        });
+    },
+    
+    initAuth: function() {
+        // Implement Firebase auth (anonymous or email/password)
+        // Set this.userId after authentication
+        return Promise.resolve(); // Placeholder
+    },
+    
+    loadRecentParties: function() {
+        DB.getRecentParties().then(recentParties => {
+            const container = document.getElementById('recent-parties-list');
+            container.innerHTML = '';
             
-            init: function() {
-                DB.init();
-                this.loadRecentParties();
-                this.loadLibrary();
-                this.setupEventListeners();
-                this.checkForReturningUser();
-            },
-            
-            checkForReturningUser: function() {
-                const recentParties = DB.getRecentParties();
-                if (recentParties.length > 0) {
-                    const lastParty = recentParties[0];
-                    document.getElementById('party-id').placeholder = `e.g. ${lastParty.id}`;
-                    document.getElementById('guest-name').placeholder = `e.g. ${lastParty.host}`;
-                }
-            },
-            
-            loadRecentParties: function() {
-                const recentParties = DB.getRecentParties();
-                const container = document.getElementById('recent-parties-list');
-                container.innerHTML = '';
-                
-                if (recentParties.length === 0) {
-                    container.innerHTML = `
-                        <div class="col-span-full text-center py-8">
-                            <i class="fas fa-film text-4xl text-gray-300 mb-4"></i>
-                            <p class="text-gray-500">No recent parties yet</p>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                recentParties.forEach(party => {
-                    const partyEl = document.createElement('div');
-                    partyEl.className = 'border rounded-xl p-4 hover:bg-gray-50 smooth-transition cursor-pointer';
-                    partyEl.innerHTML = `
-                        <div class="flex justify-between items-start mb-2">
-                            <h3 class="font-medium text-primary truncate">${party.name}</h3>
-                            <span class="text-xs text-gray-500 whitespace-nowrap ml-2">${Utils.formatTime(party.timestamp)}</span>
-                        </div>
-                        <p class="text-sm text-gray-600 mb-1 truncate" title="${party.videoTitle}">
-                            <i class="fas fa-play-circle mr-1 text-accent"></i> ${party.videoTitle || 'HD Today TV Video'}
-                        </p>
-                        <p class="text-xs text-gray-500 mb-3">
-                            <i class="fas fa-crown mr-1 text-yellow-500"></i> ${party.host}
-                        </p>
-                        <button class="join-recent-party w-full bg-gray-100 hover:bg-accent hover:text-white text-sm py-2 px-4 rounded-lg smooth-transition" data-id="${party.id}">
-                            <i class="fas fa-sign-in-alt mr-1"></i> Join
-                        </button>
-                    `;
-                    container.appendChild(partyEl);
-                });
-            },
-            
-            loadLibrary: function() {
-                const library = DB.getLibrary();
-                const container = document.getElementById('library-list');
-                container.innerHTML = '';
-                
-                if (library.length === 0) {
-                    container.innerHTML = `
-                        <div class="text-center py-8">
-                            <i class="fas fa-video-slash text-4xl text-gray-300 mb-4"></i>
-                            <p class="text-gray-500">Your library is empty</p>
-                            <p class="text-sm text-gray-400 mt-2">Add HD Today TV videos to get started</p>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                library.forEach((video, index) => {
-                    const item = document.createElement('div');
-                    item.className = 'border rounded-lg p-3 hover:bg-gray-50 smooth-transition';
-                    item.innerHTML = `
-                        <div class="flex justify-between items-center">
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-medium text-primary truncate">${video.title || 'HD Today TV Video'}</p>
-                                <p class="text-xs text-gray-500 truncate">${video.url}</p>
-                            </div>
-                            <div class="flex space-x-2 ml-3">
-                                <button class="use-video text-white bg-accent hover:bg-secondary p-2 rounded-full smooth-transition" data-url="${video.url}" data-title="${video.title}" title="Use this video">
-                                    <i class="fas fa-play text-xs"></i>
-                                </button>
-                                <button class="remove-video text-white bg-red-500 hover:bg-red-600 p-2 rounded-full smooth-transition" data-index="${index}" title="Remove from library">
-                                    <i class="fas fa-trash text-xs"></i>
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                    container.appendChild(item);
-                });
-            },
-            
-            setupEventListeners: function() {
-                // Tab switching
-                document.getElementById('create-tab').addEventListener('click', () => this.switchTab('create'));
-                document.getElementById('join-tab').addEventListener('click', () => this.switchTab('join'));
-                document.getElementById('library-tab').addEventListener('click', () => this.switchTab('library'));
-                
-                // Create party
-                document.getElementById('create-party-btn').addEventListener('click', this.createParty.bind(this));
-                
-                // Join party
-                document.getElementById('join-party-btn').addEventListener('click', this.joinParty.bind(this));
-                
-                // Library
-                document.getElementById('add-to-library').addEventListener('click', this.addToLibrary.bind(this));
-                
-                // HD Today TV integration
-                document.getElementById('browse-hd-today').addEventListener('click', this.openHdTodayModal.bind(this));
-                document.getElementById('close-hd-modal').addEventListener('click', this.closeHdTodayModal.bind(this));
-                document.getElementById('select-hd-video').addEventListener('click', this.selectHdTodayVideo.bind(this));
-                
-                // Party room controls
-                document.getElementById('leave-party-btn').addEventListener('click', this.leaveParty.bind(this));
-                document.getElementById('play-btn').addEventListener('click', this.playVideo.bind(this));
-                document.getElementById('pause-btn').addEventListener('click', this.pauseVideo.bind(this));
-                document.getElementById('send-chat-btn').addEventListener('click', this.sendChatMessage.bind(this));
-                document.getElementById('chat-input').addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') this.sendChatMessage();
-                });
-                
-                // Recent parties join buttons (delegated event)
-                document.getElementById('recent-parties-list').addEventListener('click', (e) => {
-                    if (e.target.classList.contains('join-recent-party') || 
-                        e.target.closest('.join-recent-party')) {
-                        const button = e.target.classList.contains('join-recent-party') ? 
-                            e.target : e.target.closest('.join-recent-party');
-                        const partyId = button.getAttribute('data-id');
-                        document.getElementById('party-id').value = partyId;
-                        this.switchTab('join');
-                        Utils.showNotification('Party ID copied to join form');
-                    }
-                });
-                
-                // Library item actions (delegated events)
-                document.getElementById('library-list').addEventListener('click', (e) => {
-                    // Use video button
-                    if (e.target.classList.contains('use-video') || 
-                        e.target.closest('.use-video')) {
-                        const button = e.target.classList.contains('use-video') ? 
-                            e.target : e.target.closest('.use-video');
-                        const url = button.getAttribute('data-url');
-                        const title = button.getAttribute('data-title');
-                        document.getElementById('video-url').value = url;
-                        this.switchTab('create');
-                        Utils.showNotification('Video URL copied to create form');
-                    }
-                    
-                    // Remove video button
-                    if (e.target.classList.contains('remove-video') || 
-                        e.target.closest('.remove-video')) {
-                        const button = e.target.classList.contains('remove-video') ? 
-                            e.target : e.target.closest('.remove-video');
-                        const index = parseInt(button.getAttribute('data-index'));
-                        this.removeFromLibrary(index);
-                    }
-                });
-            },
-            
-            switchTab: function(tab) {
-                // Hide all sections
-                document.getElementById('create-section').classList.add('hidden');
-                document.getElementById('join-section').classList.add('hidden');
-                document.getElementById('library-section').classList.add('hidden');
-                
-                // Reset active tabs
-                document.getElementById('create-tab').classList.remove('active-tab');
-                document.getElementById('join-tab').classList.remove('active-tab');
-                document.getElementById('library-tab').classList.remove('active-tab');
-                
-                // Show selected section and set active tab
-                if (tab === 'create') {
-                    document.getElementById('create-section').classList.remove('hidden');
-                    document.getElementById('create-tab').classList.add('active-tab');
-                } else if (tab === 'join') {
-                    document.getElementById('join-section').classList.remove('hidden');
-                    document.getElementById('join-tab').classList.add('active-tab');
-                } else if (tab === 'library') {
-                    document.getElementById('library-section').classList.remove('hidden');
-                    document.getElementById('library-tab').classList.add('active-tab');
-                }
-            },
-            
-            createParty: function() {
-                const partyName = document.getElementById('party-name').value.trim();
-                const hostName = document.getElementById('host-name').value.trim();
-                const videoUrl = document.getElementById('video-url').value.trim();
-                
-                if (!partyName || !hostName || !videoUrl) {
-                    Utils.showNotification('Please fill in all fields', 'error');
-                    return;
-                }
-                
-                const videoData = Utils.extractHdTodayData(videoUrl);
-                if (!videoData) {
-                    Utils.showNotification('Please enter a valid HD Today TV URL', 'error');
-                    return;
-                }
-                
-                const partyId = Utils.generateId();
-                
-                const partyData = {
-                    id: partyId,
-                    name: partyName,
-                    host: hostName,
-                    videoUrl: videoUrl,
-                    videoTitle: videoData.title,
-                    members: [hostName],
-                    chat: [],
-                    isPlaying: false,
-                    lastPosition: 0,
-                    createdAt: new Date().toISOString()
-                };
-                
-                DB.createParty(partyData);
-                this.enterParty(partyId, hostName, true);
-                Utils.showNotification('Party created successfully!', 'success');
-            },
-            
-            joinParty: function() {
-                const partyId = document.getElementById('party-id').value.trim();
-                const guestName = document.getElementById('guest-name').value.trim();
-                
-                if (!partyId || !guestName) {
-                    Utils.showNotification('Please fill in all fields', 'error');
-                    return;
-                }
-                
-                const party = DB.getParty(partyId);
-                
-                if (!party) {
-                    Utils.showNotification('Party not found', 'error');
-                    return;
-                }
-                
-                // Add user to members list if not already there
-                if (!party.members.includes(guestName)) {
-                    party.members.push(guestName);
-                    DB.updateParty(partyId, { members: party.members });
-                }
-                
-                this.enterParty(partyId, guestName, false);
-                Utils.showNotification(`Joined ${party.name} successfully!`, 'success');
-            },
-            
-            enterParty: function(partyId, userName, isHost) {
-                const party = DB.getParty(partyId);
-                
-                if (!party) {
-                    Utils.showNotification('Party not found', 'error');
-                    return;
-                }
-                
-                this.currentParty = party;
-                this.currentUser = userName;
-                this.isHost = isHost;
-                
-                // Update UI
-                document.getElementById('party-name-display').textContent = party.name;
-                document.getElementById('party-id-display').innerHTML = `Party ID: <span class="font-mono bg-gray-100 px-2 py-1 rounded">${party.id}</span>`;
-                document.getElementById('party-host').innerHTML = `<i class="fas fa-crown text-yellow-500 mr-1"></i> <span class="font-medium">Host:</span> <span class="font-mono">${party.host}</span>`;
-                document.getElementById('party-members').innerHTML = `<i class="fas fa-users mr-1"></i> <span class="font-medium">Members:</span> <span class="font-mono">${party.members.join(', ')}</span>`;
-                
-                // Set up video player
-                const player = document.getElementById('video-player');
-                player.src = party.videoUrl;
-                
-                // Load chat messages
-                this.loadChatMessages();
-                
-                // Hide other sections and show party room
-                document.getElementById('create-section').classList.add('hidden');
-                document.getElementById('join-section').classList.add('hidden');
-                document.getElementById('library-section').classList.add('hidden');
-                document.getElementById('party-room').classList.remove('hidden');
-                
-                // Scroll to top
-                window.scrollTo(0, 0);
-                
-                // Simulate sync with host (in a real app, this would be done with WebSockets)
-                if (this.isHost) {
-                    if (this.syncInterval) clearInterval(this.syncInterval);
-                    this.syncInterval = setInterval(() => {
-                        this.syncPartyState();
-                    }, 3000);
-                }
-            },
-            
-            leaveParty: function() {
-                if (this.syncInterval) {
-                    clearInterval(this.syncInterval);
-                    this.syncInterval = null;
-                }
-                
-                this.currentParty = null;
-                this.currentUser = null;
-                this.isHost = false;
-                
-                // Clear video player
-                document.getElementById('video-player').src = '';
-                
-                // Hide party room and show create section
-                document.getElementById('party-room').classList.add('hidden');
-                this.switchTab('create');
-                
-                // Reload recent parties
-                this.loadRecentParties();
-                
-                Utils.showNotification('You left the party', 'info');
-            },
-            
-            playVideo: function() {
-                if (this.isHost) {
-                    DB.updateParty(this.currentParty.id, { isPlaying: true });
-                    Utils.showNotification('Play command sent to all members');
-                }
-                // Note: In a real implementation, this would control the iframe player
-            },
-            
-            pauseVideo: function() {
-                if (this.isHost) {
-                    DB.updateParty(this.currentParty.id, { isPlaying: false });
-                    Utils.showNotification('Pause command sent to all members');
-                }
-                // Note: In a real implementation, this would control the iframe player
-            },
-            
-            syncPartyState: function() {
-                // In a real app, this would sync playback state between all clients
-                const party = DB.getParty(this.currentParty.id);
-                // Update UI based on current party state
-            },
-            
-            sendChatMessage: function() {
-                const input = document.getElementById('chat-input');
-                const message = input.value.trim();
-                
-                if (!message) return;
-                
-                const chatMessage = {
-                    sender: this.currentUser,
-                    text: message,
-                    timestamp: new Date().toISOString()
-                };
-                
-                // Add message to party chat
-                const party = DB.getParty(this.currentParty.id);
-                party.chat.push(chatMessage);
-                DB.updateParty(this.currentParty.id, { chat: party.chat });
-                
-                // Add message to UI
-                this.addChatMessage(chatMessage);
-                
-                // Clear input
-                input.value = '';
-                input.focus();
-            },
-            
-            addChatMessage: function(message) {
-                const container = document.getElementById('chat-messages');
-                const isCurrentUser = message.sender === this.currentUser;
-                
-                const messageEl = document.createElement('div');
-                messageEl.className = `chat-message ${isCurrentUser ? 'text-right' : 'text-left'}`;
-                messageEl.innerHTML = `
-                    <div class="inline-block max-w-xs md:max-w-md lg:max-w-lg xl:max-w-xl text-left">
-                        <div class="text-xs ${isCurrentUser ? 'text-accent' : 'text-gray-600'} mb-1">
-                            ${isCurrentUser ? 'You' : message.sender}
-                        </div>
-                        <div class="px-4 py-2 rounded-lg ${isCurrentUser ? 'bg-accent text-white' : 'bg-gray-100 text-gray-800'}">
-                            ${message.text}
-                        </div>
-                        <div class="text-xs text-gray-400 mt-1">
-                            ${Utils.formatTime(message.timestamp)}
-                        </div>
+            if (!recentParties || recentParties.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-8">
+                        <i class="fas fa-film text-4xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-500">No recent parties yet</p>
                     </div>
                 `;
-                container.appendChild(messageEl);
-                container.scrollTop = container.scrollHeight;
-            },
-            
-            loadChatMessages: function() {
-                const container = document.getElementById('chat-messages');
-                container.innerHTML = '';
-                
-                if (this.currentParty.chat.length === 0) {
-                    container.innerHTML = `
-                        <div class="text-center py-8 text-gray-400">
-                            <i class="fas fa-comment-slash text-2xl mb-2"></i>
-                            <p>No messages yet</p>
-                            <p class="text-sm mt-2">Send a message to start the conversation</p>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                this.currentParty.chat.forEach(message => {
-                    this.addChatMessage(message);
-                });
-            },
-            
-            addToLibrary: function() {
-                const url = document.getElementById('upload-video').value.trim();
-                
-                if (!url) {
-                    Utils.showNotification('Please enter a video URL', 'error');
-                    return;
-                }
-                
-                const videoData = Utils.extractHdTodayData(url);
-                if (!videoData) {
-                    Utils.showNotification('Please enter a valid HD Today TV URL', 'error');
-                    return;
-                }
-                
-                if (DB.addToLibrary(videoData)) {
-                    this.loadLibrary();
-                    document.getElementById('upload-video').value = '';
-                    Utils.showNotification('Video added to library', 'success');
-                } else {
-                    Utils.showNotification('This video is already in your library', 'info');
-                }
-            },
-            
-            removeFromLibrary: function(index) {
-                if (DB.removeFromLibrary(index)) {
-                    this.loadLibrary();
-                    Utils.showNotification('Video removed from library', 'success');
-                }
-            },
-            
-            openHdTodayModal: function() {
-                document.getElementById('hd-today-modal').classList.remove('hidden');
-                document.body.style.overflow = 'hidden';
-            },
-            
-            closeHdTodayModal: function() {
-                document.getElementById('hd-today-modal').classList.add('hidden');
-                document.body.style.overflow = '';
-            },
-            
-            selectHdTodayVideo: function() {
-                // In a real implementation, this would get the current URL from the iframe
-                // For demo purposes, we'll simulate a selection
-                const demoUrl = 'https://www.hdtodaytv.tv/watch/movie-title';
-                const demoTitle = 'Movie Title';
-                
-                DB.setHdTodaySession({
-                    lastSelectedUrl: demoUrl,
-                    lastSelectedTitle: demoTitle
-                });
-                
-                document.getElementById('video-url').value = demoUrl;
-                this.closeHdTodayModal();
-                Utils.showNotification('Video URL selected');
+                return;
             }
+            
+            // Rest of your rendering code...
+        });
+    },
+    
+    // Update other methods similarly to handle promises
+    createParty: function() {
+        const partyName = document.getElementById('party-name').value.trim();
+        const hostName = document.getElementById('host-name').value.trim();
+        const videoUrl = document.getElementById('video-url').value.trim();
+        
+        if (!partyName || !hostName || !videoUrl) {
+            Utils.showNotification('Please fill in all fields', 'error');
+            return Promise.resolve();
+        }
+        
+        const videoData = Utils.extractHdTodayData(videoUrl);
+        if (!videoData) {
+            Utils.showNotification('Please enter a valid HD Today TV URL', 'error');
+            return Promise.resolve();
+        }
+        
+        const partyId = Utils.generateId();
+        
+        const partyData = {
+            id: partyId,
+            name: partyName,
+            host: hostName,
+            videoUrl: videoUrl,
+            videoTitle: videoData.title,
+            members: [hostName],
+            chat: [],
+            isPlaying: false,
+            lastPosition: 0,
+            createdAt: new Date().toISOString()
         };
+        
+        return DB.createParty(partyData)
+            .then(() => {
+                this.enterParty(partyId, hostName, true);
+                Utils.showNotification('Party created successfully!', 'success');
+            })
+            .catch(error => {
+                Utils.showNotification('Failed to create party', 'error');
+                console.error(error);
+            });
+    },
+    
+    enterParty: function(partyId, userName, isHost) {
+        // First remove any existing listener
+        if (this.partyListener) {
+            this.partyListener.off();
+        }
+        
+        DB.getParty(partyId).then(party => {
+            if (!party) {
+                Utils.showNotification('Party not found', 'error');
+                return;
+            }
+            
+            this.currentParty = party;
+            this.currentUser = userName;
+            this.isHost = isHost;
+            
+            // Set up real-time listener for party updates
+            this.partyListener = database.ref('watchParties/' + partyId).on('value', snapshot => {
+                const updatedParty = snapshot.val();
+                if (updatedParty) {
+                    this.currentParty = updatedParty;
+                    this.updatePartyUI(updatedParty);
+                }
+            });
+            
+            // Update UI
+            this.updatePartyUI(party);
+            
+            // Hide other sections and show party room
+            document.getElementById('create-section').classList.add('hidden');
+            document.getElementById('join-section').classList.add('hidden');
+            document.getElementById('library-section').classList.add('hidden');
+            document.getElementById('party-room').classList.remove('hidden');
+            
+            // Scroll to top
+            window.scrollTo(0, 0);
+        });
+    },
+    
+    updatePartyUI: function(party) {
+        document.getElementById('party-name-display').textContent = party.name;
+        document.getElementById('party-id-display').innerHTML = `Party ID: <span class="font-mono bg-gray-100 px-2 py-1 rounded">${party.id}</span>`;
+        document.getElementById('party-host').innerHTML = `<i class="fas fa-crown text-yellow-500 mr-1"></i> <span class="font-medium">Host:</span> <span class="font-mono">${party.host}</span>`;
+        document.getElementById('party-members').innerHTML = `<i class="fas fa-users mr-1"></i> <span class="font-medium">Members:</span> <span class="font-mono">${party.members.join(', ')}</span>`;
+        
+        // Update video player if URL changed
+        const player = document.getElementById('video-player');
+        if (player.src !== party.videoUrl) {
+            player.src = party.videoUrl;
+        }
+        
+        // Load chat messages
+        this.loadChatMessages(party.chat);
+    },
+    
+    leaveParty: function() {
+        if (this.partyListener) {
+            this.partyListener.off();
+            this.partyListener = null;
+        }
+        
+        if (this.syncInterval) {
+            clearInterval(this.syncInterval);
+            this.syncInterval = null;
+        }
+        
+        this.currentParty = null;
+        this.currentUser = null;
+        this.isHost = false;
+        
+        // Clear video player
+        document.getElementById('video-player').src = '';
+        
+        // Hide party room and show create section
+        document.getElementById('party-room').classList.add('hidden');
+        this.switchTab('create');
+        
+        // Reload recent parties
+        this.loadRecentParties();
+        
+        Utils.showNotification('You left the party', 'info');
+    },
+    
+    // ... rest of your AppState methods with similar promise-based updates
+};
         
         // Initialize the app
         document.addEventListener('DOMContentLoaded', () => {
