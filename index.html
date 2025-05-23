@@ -3,16 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Movie Party - Watch Together</title>
+    <title>Watch Party | HD Today TV</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1a365d',
+                        secondary: '#2c5282',
+                        accent: '#4299e1',
+                        dark: '#1a202c',
+                        light: '#f7fafc'
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        /* Custom styles that can't be done with Tailwind */
         .video-container {
             position: relative;
-            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            padding-bottom: 56.25%;
             height: 0;
             overflow: hidden;
+            background-color: #000;
+            border-radius: 0.5rem;
         }
         .video-container iframe {
             position: absolute;
@@ -21,618 +37,810 @@
             width: 100%;
             height: 100%;
         }
-        .chat-messages {
-            height: 400px;
-            overflow-y: auto;
+        .hidden {
+            display: none;
         }
-        .progress-bar {
-            height: 5px;
-            background-color: #4f46e5;
-            width: 0%;
-            transition: width 0.1s linear;
+        .active-tab {
+            border-bottom: 2px solid #4299e1;
+            color: #4299e1;
+            font-weight: 600;
+        }
+        .chat-message {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .smooth-transition {
+            transition: all 0.3s ease;
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white">
-    <!-- Header -->
-    <header class="bg-gray-800 py-4 px-6 flex justify-between items-center">
-        <h1 class="text-2xl font-bold text-indigo-500">Movie Party</h1>
-        <div class="flex space-x-4">
-            <button id="uploadBtn" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">Upload Movie</button>
-            <button id="createPartyBtn" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">Create Party</button>
-        </div>
-    </header>
+<body class="bg-gray-50 min-h-screen font-sans">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Header -->
+        <header class="mb-10 text-center">
+            <div class="flex justify-center items-center mb-4">
+                <i class="fas fa-film text-4xl text-accent mr-3"></i>
+                <h1 class="text-4xl font-bold text-primary">Watch Party</h1>
+            </div>
+            <p class="text-lg text-gray-600 max-w-2xl mx-auto">Watch HD Today TV content together with friends in real-time. Create or join a party to start watching!</p>
+        </header>
 
-    <!-- Main Content -->
-    <main class="container mx-auto px-4 py-8">
-        <!-- Party Section (hidden by default) -->
-        <div id="partySection" class="hidden">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Video Player -->
-                <div class="lg:col-span-2">
-                    <div class="video-container bg-black rounded-lg">
-                        <video id="partyVideo" controls class="w-full">
-                            Your browser does not support the video tag.
-                        </video>
-                    </div>
-                    <div class="progress-bar"></div>
-                    <div class="flex justify-between items-center mt-2">
-                        <span id="currentTime">00:00:00</span>
-                        <span id="duration">00:00:00</span>
-                    </div>
-                    <div class="flex space-x-4 mt-4">
-                        <button id="playPauseBtn" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">
-                            <i class="fas fa-play"></i> Play
-                        </button>
-                        <button id="syncBtn" class="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded">
-                            <i class="fas fa-sync-alt"></i> Sync
-                        </button>
-                        <button id="leavePartyBtn" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded">
-                            <i class="fas fa-sign-out-alt"></i> Leave Party
+        <!-- Main Content -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-10">
+            <!-- Tabs -->
+            <div class="flex border-b">
+                <button id="create-tab" class="px-6 py-4 font-medium active-tab smooth-transition">
+                    <i class="fas fa-plus-circle mr-2"></i>Create Party
+                </button>
+                <button id="join-tab" class="px-6 py-4 font-medium text-gray-600 smooth-transition">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Join Party
+                </button>
+                <button id="library-tab" class="px-6 py-4 font-medium text-gray-600 smooth-transition">
+                    <i class="fas fa-video mr-2"></i>Library
+                </button>
+            </div>
+
+            <!-- Create Party Section -->
+            <div id="create-section" class="p-8 space-y-6">
+                <div>
+                    <label for="party-name" class="block text-sm font-medium text-gray-700 mb-2">Party Name</label>
+                    <input type="text" id="party-name" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-accent focus:border-accent outline-none smooth-transition" placeholder="Friday Movie Night">
+                </div>
+                <div>
+                    <label for="host-name" class="block text-sm font-medium text-gray-700 mb-2">Your Name</label>
+                    <input type="text" id="host-name" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-accent focus:border-accent outline-none smooth-transition" placeholder="Your name">
+                </div>
+                <div>
+                    <label for="video-url" class="block text-sm font-medium text-gray-700 mb-2">HD Today TV URL</label>
+                    <div class="relative">
+                        <input type="text" id="video-url" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-accent focus:border-accent outline-none smooth-transition" placeholder="https://www.hdtodaytv.tv/watch/...">
+                        <button id="browse-hd-today" class="absolute right-2 top-2 bg-accent text-white px-3 py-1 rounded-md text-sm hover:bg-secondary smooth-transition">
+                            Browse HD Today
                         </button>
                     </div>
                 </div>
+                <button id="create-party-btn" class="w-full bg-accent text-white py-3 px-6 rounded-lg font-medium hover:bg-secondary smooth-transition flex items-center justify-center">
+                    <i class="fas fa-film mr-2"></i> Create Party
+                </button>
+            </div>
 
-                <!-- Chat Section -->
-                <div class="bg-gray-800 rounded-lg p-4">
-                    <h3 class="text-xl font-semibold mb-4">Party Chat</h3>
-                    <div id="chatMessages" class="chat-messages mb-4 space-y-2"></div>
+            <!-- Join Party Section -->
+            <div id="join-section" class="hidden p-8 space-y-6">
+                <div>
+                    <label for="party-id" class="block text-sm font-medium text-gray-700 mb-2">Party ID</label>
+                    <input type="text" id="party-id" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-accent focus:border-accent outline-none smooth-transition" placeholder="Enter party ID">
+                </div>
+                <div>
+                    <label for="guest-name" class="block text-sm font-medium text-gray-700 mb-2">Your Name</label>
+                    <input type="text" id="guest-name" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-accent focus:border-accent outline-none smooth-transition" placeholder="Your name">
+                </div>
+                <button id="join-party-btn" class="w-full bg-accent text-white py-3 px-6 rounded-lg font-medium hover:bg-secondary smooth-transition flex items-center justify-center">
+                    <i class="fas fa-sign-in-alt mr-2"></i> Join Party
+                </button>
+            </div>
+
+            <!-- Library Section -->
+            <div id="library-section" class="hidden p-8">
+                <div class="mb-6">
+                    <label for="upload-video" class="block text-sm font-medium text-gray-700 mb-2">Add HD Today TV URL</label>
                     <div class="flex">
-                        <input id="chatInput" type="text" placeholder="Type your message..." 
-                               class="flex-grow bg-gray-700 rounded-l px-4 py-2 focus:outline-none">
-                        <button id="sendMessageBtn" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-r">
+                        <input type="text" id="upload-video" class="flex-1 px-4 py-3 rounded-l-lg border border-gray-300 focus:ring-2 focus:ring-accent focus:border-accent outline-none smooth-transition" placeholder="https://www.hdtodaytv.tv/watch/...">
+                        <button id="add-to-library" class="bg-accent text-white px-6 rounded-r-lg hover:bg-secondary smooth-transition">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="library-list" class="space-y-3">
+                    <!-- Library items will be added here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Party Room Section -->
+        <div id="party-room" class="hidden bg-white rounded-xl shadow-lg overflow-hidden">
+            <div class="p-6 border-b">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 id="party-name-display" class="text-2xl font-bold text-primary"></h2>
+                        <div id="party-id-display" class="text-sm text-gray-500">Party ID: <span class="font-mono bg-gray-100 px-2 py-1 rounded">loading...</span></div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div id="party-host" class="text-sm text-gray-700"><i class="fas fa-crown text-yellow-500 mr-1"></i> <span class="font-medium">Host:</span> <span class="font-mono">loading...</span></div>
+                        <div id="party-members" class="text-sm text-gray-700"><i class="fas fa-users mr-1"></i> <span class="font-medium">Members:</span> <span class="font-mono">loading...</span></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <div class="video-container mb-6">
+                    <iframe id="video-player" src="" frameborder="0" allowfullscreen></iframe>
+                </div>
+                
+                <div class="flex space-x-4 mb-6">
+                    <button id="play-btn" class="flex-1 bg-accent text-white py-3 px-6 rounded-lg font-medium hover:bg-secondary smooth-transition flex items-center justify-center">
+                        <i class="fas fa-play mr-2"></i> Play
+                    </button>
+                    <button id="pause-btn" class="flex-1 bg-accent text-white py-3 px-6 rounded-lg font-medium hover:bg-secondary smooth-transition flex items-center justify-center">
+                        <i class="fas fa-pause mr-2"></i> Pause
+                    </button>
+                    <button id="leave-party-btn" class="flex-1 bg-red-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-red-600 smooth-transition flex items-center justify-center">
+                        <i class="fas fa-sign-out-alt mr-2"></i> Leave
+                    </button>
+                </div>
+                
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <h3 class="font-medium text-lg mb-3 flex items-center">
+                        <i class="fas fa-comments mr-2 text-accent"></i> Party Chat
+                    </h3>
+                    <div id="chat-messages" class="border rounded-lg p-4 h-64 overflow-y-auto mb-3 bg-white space-y-3"></div>
+                    <div class="flex">
+                        <input type="text" id="chat-input" class="flex-1 px-4 py-3 rounded-l-lg border border-gray-300 focus:ring-2 focus:ring-accent focus:border-accent outline-none smooth-transition" placeholder="Type your message...">
+                        <button id="send-chat-btn" class="bg-accent text-white px-6 rounded-r-lg hover:bg-secondary smooth-transition">
                             <i class="fas fa-paper-plane"></i>
                         </button>
                     </div>
                 </div>
             </div>
-
-            <!-- Party Info -->
-            <div id="partyInfo" class="mt-6 bg-gray-800 rounded-lg p-4">
-                <h3 class="text-xl font-semibold mb-2">Party Information</h3>
-                <p>Party ID: <span id="partyId" class="font-mono">N/A</span></p>
-                <p>Members: <span id="partyMembers">1</span></p>
-                <p>Movie: <span id="partyMovie">None</span></p>
-                <div class="mt-2">
-                    <label for="inviteLink" class="block text-sm font-medium">Invite Link:</label>
-                    <div class="flex">
-                        <input id="inviteLink" type="text" readonly 
-                               class="flex-grow bg-gray-700 rounded-l px-4 py-2 focus:outline-none">
-                        <button id="copyInviteBtn" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-r">
-                            <i class="fas fa-copy"></i> Copy
-                        </button>
-                    </div>
-                </div>
-            </div>
         </div>
 
-        <!-- Join Party Modal -->
-        <div id="joinPartyModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
-            <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
-                <h3 class="text-xl font-semibold mb-4">Join a Party</h3>
-                <div class="mb-4">
-                    <label for="partyCode" class="block text-sm font-medium mb-2">Party Code:</label>
-                    <input id="partyCode" type="text" placeholder="Enter party code" 
-                           class="w-full bg-gray-700 rounded px-4 py-2 focus:outline-none">
-                </div>
-                <div class="flex justify-end space-x-2">
-                    <button id="cancelJoinBtn" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded">Cancel</button>
-                    <button id="confirmJoinBtn" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">Join</button>
-                </div>
+        <!-- Recent Parties Section -->
+        <div id="recent-parties" class="bg-white rounded-xl shadow-lg overflow-hidden mt-10">
+            <div class="p-6 border-b">
+                <h2 class="text-xl font-bold text-primary flex items-center">
+                    <i class="fas fa-history mr-2 text-accent"></i> Recent Parties
+                </h2>
+            </div>
+            <div id="recent-parties-list" class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Recent parties will be added here -->
             </div>
         </div>
+    </div>
 
-        <!-- Create Party Modal -->
-        <div id="createPartyModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
-            <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
-                <h3 class="text-xl font-semibold mb-4">Create a Party</h3>
-                <div class="mb-4">
-                    <label for="partyName" class="block text-sm font-medium mb-2">Party Name:</label>
-                    <input id="partyName" type="text" placeholder="My Awesome Party" 
-                           class="w-full bg-gray-700 rounded px-4 py-2 focus:outline-none">
-                </div>
-                <div class="mb-4">
-                    <label for="selectMovie" class="block text-sm font-medium mb-2">Select Movie:</label>
-                    <select id="selectMovie" class="w-full bg-gray-700 rounded px-4 py-2 focus:outline-none">
-                        <option value="">Select a movie</option>
-                    </select>
-                </div>
-                <div class="flex justify-end space-x-2">
-                    <button id="cancelCreateBtn" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded">Cancel</button>
-                    <button id="confirmCreateBtn" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">Create</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Upload Movie Modal -->
-        <div id="uploadModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
-            <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
-                <h3 class="text-xl font-semibold mb-4">Upload a Movie</h3>
-                <div class="mb-4">
-                    <label for="movieTitle" class="block text-sm font-medium mb-2">Movie Title:</label>
-                    <input id="movieTitle" type="text" placeholder="Movie title" 
-                           class="w-full bg-gray-700 rounded px-4 py-2 focus:outline-none">
-                </div>
-                <div class="mb-4">
-                    <label for="movieFile" class="block text-sm font-medium mb-2">Movie File:</label>
-                    <input id="movieFile" type="file" accept="video/*" 
-                           class="w-full bg-gray-700 rounded px-4 py-2 focus:outline-none">
-                </div>
-                <div class="mb-4">
-                    <label for="movieThumbnail" class="block text-sm font-medium mb-2">Thumbnail (optional):</label>
-                    <input id="movieThumbnail" type="file" accept="image/*" 
-                           class="w-full bg-gray-700 rounded px-4 py-2 focus:outline-none">
-                </div>
-                <div class="flex justify-end space-x-2">
-                    <button id="cancelUploadBtn" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded">Cancel</button>
-                    <button id="confirmUploadBtn" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded">Upload</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Home Content (shown when not in a party) -->
-        <div id="homeContent" class="text-center py-12">
-            <h2 class="text-3xl font-bold mb-6">Watch Movies Together in Sync</h2>
-            <p class="text-xl mb-8">Create or join a watch party to enjoy movies with friends in real-time.</p>
-            <div class="flex justify-center space-x-4">
-                <button id="joinPartyBtn" class="bg-indigo-600 hover:bg-indigo-700 px-6 py-3 rounded-lg text-lg">
-                    <i class="fas fa-user-plus mr-2"></i> Join Party
+    <!-- HD Today TV Modal -->
+    <div id="hd-today-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h3 class="text-lg font-bold">Browse HD Today TV</h3>
+                <button id="close-hd-modal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
                 </button>
-                <button id="createPartyBtn2" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg text-lg">
-                    <i class="fas fa-plus mr-2"></i> Create Party
+            </div>
+            <div class="p-4 h-[70vh] overflow-y-auto">
+                <iframe id="hd-today-iframe" src="https://www.hdtodaytv.tv/home" frameborder="0" class="w-full h-full"></iframe>
+            </div>
+            <div class="p-4 border-t text-right">
+                <button id="select-hd-video" class="bg-accent text-white px-6 py-2 rounded-lg hover:bg-secondary smooth-transition">
+                    Select Video
                 </button>
             </div>
         </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-gray-800 py-6 px-6 text-center">
-        <p>© 2023 Movie Party. All rights reserved.</p>
-    </footer>
+    </div>
 
     <script>
-        // DOM Elements
-const LOCAL_STORAGE_KEYS = {
-            MOVIES: 'movies',
-            CURRENT_PARTY: 'currentParty'
-        };
-
-        // DOM Elements
-        const elements = {
-            partySection: document.getElementById('partySection'),
-            homeContent: document.getElementById('homeContent'),
-            joinPartyModal: document.getElementById('joinPartyModal'),
-            createPartyModal: document.getElementById('createPartyModal'),
-            uploadModal: document.getElementById('uploadModal'),
-            partyVideo: document.getElementById('partyVideo'),
-            chatMessages: document.getElementById('chatMessages'),
-            chatInput: document.getElementById('chatInput'),
-            sendMessageBtn: document.getElementById('sendMessageBtn'),
-            playPauseBtn: document.getElementById('playPauseBtn'),
-            syncBtn: document.getElementById('syncBtn'),
-            leavePartyBtn: document.getElementById('leavePartyBtn'),
-            currentTime: document.getElementById('currentTime'),
-            duration: document.getElementById('duration'),
-            partyId: document.getElementById('partyId'),
-            partyMembers: document.getElementById('partyMembers'),
-            partyMovie: document.getElementById('partyMovie'),
-            inviteLink: document.getElementById('inviteLink'),
-            copyInviteBtn: document.getElementById('copyInviteBtn'),
-            progressBar: document.querySelector('.progress-bar'),
-            uploadBtn: document.getElementById('uploadBtn'),
-            createPartyBtn: document.getElementById('createPartyBtn'),
-            createPartyBtn2: document.getElementById('createPartyBtn2'),
-            joinPartyBtn: document.getElementById('joinPartyBtn'),
-            cancelJoinBtn: document.getElementById('cancelJoinBtn'),
-            confirmJoinBtn: document.getElementById('confirmJoinBtn'),
-            cancelCreateBtn: document.getElementById('cancelCreateBtn'),
-            confirmCreateBtn: document.getElementById('confirmCreateBtn'),
-            cancelUploadBtn: document.getElementById('cancelUploadBtn'),
-            confirmUploadBtn: document.getElementById('confirmUploadBtn'),
-            partyCode: document.getElementById('partyCode'),
-            partyName: document.getElementById('partyName'),
-            selectMovie: document.getElementById('selectMovie'),
-            movieTitle: document.getElementById('movieTitle'),
-            movieFile: document.getElementById('movieFile'),
-            movieThumbnail: document.getElementById('movieThumbnail')
-        };
-
-        // State
-        const state = {
-            currentParty: null,
-            isHost: false,
-            members: [],
-            movies: [],
-            socket: null,
-            videoInterval: null,
-            mockMovies: [
-                { 
-                    id: '1', 
-                    title: 'Inception', 
-                    url: 'https://example.com/videos/inception.mp4', 
-                    thumbnail: 'https://example.com/thumbnails/inception.jpg' 
-                },
-                { 
-                    id: '2', 
-                    title: 'The Shawshank Redemption', 
-                    url: 'https://example.com/videos/shawshank.mp4', 
-                    thumbnail: 'https://example.com/thumbnails/shawshank.jpg' 
-                },
-                { 
-                    id: '3', 
-                    title: 'Pulp Fiction', 
-                    url: 'https://example.com/videos/pulp.mp4', 
-                    thumbnail: 'https://example.com/thumbnails/pulp.jpg' 
+        // Enhanced Database functions
+        const DB = {
+            init: function() {
+                if (!localStorage.getItem('watchParties')) {
+                    localStorage.setItem('watchParties', JSON.stringify([]));
                 }
-            ],
-            mockMessages: [
-                { type: 'chat', user: 'Friend1', message: 'This movie is awesome!' },
-                { type: 'chat', user: 'Friend2', message: 'I love this scene!' },
-                { type: 'sync', time: 0 }
-            ]
-        };
-
-        // Utility functions
-        const utils = {
-            formatTime: (seconds) => {
-                const h = Math.floor(seconds / 3600);
-                const m = Math.floor((seconds % 3600) / 60);
-                const s = Math.floor(seconds % 60);
-                return [h, m, s].map(unit => unit.toString().padStart(2, '0')).join(':');
-            },
-            generateId: (prefix = '') => {
-                return `${prefix}${Math.random().toString(36).substr(2, 8)}`;
-            },
-            toggleModal: (modal, show) => {
-                modal.classList.toggle('hidden', !show);
-            },
-            clearForm: (form) => {
-                if (form.tagName === 'FORM') {
-                    form.reset();
-                } else if (form instanceof HTMLInputElement || form instanceof HTMLSelectElement) {
-                    form.value = '';
+                if (!localStorage.getItem('videoLibrary')) {
+                    localStorage.setItem('videoLibrary', JSON.stringify([]));
                 }
+                if (!localStorage.getItem('recentParties')) {
+                    localStorage.setItem('recentParties', JSON.stringify([]));
+                }
+                if (!localStorage.getItem('hdTodaySession')) {
+                    localStorage.setItem('hdTodaySession', JSON.stringify({
+                        lastSelectedUrl: '',
+                        lastSelectedTitle: ''
+                    }));
+                }
+            },
+            
+            createParty: function(partyData) {
+                const parties = JSON.parse(localStorage.getItem('watchParties'));
+                parties.push(partyData);
+                localStorage.setItem('watchParties', JSON.stringify(parties));
+                
+                // Add to recent parties
+                const recentParties = JSON.parse(localStorage.getItem('recentParties'));
+                recentParties.unshift({
+                    id: partyData.id,
+                    name: partyData.name,
+                    host: partyData.host,
+                    videoUrl: partyData.videoUrl,
+                    videoTitle: partyData.videoTitle,
+                    timestamp: new Date().toISOString()
+                });
+                
+                // Keep only last 6 parties
+                if (recentParties.length > 6) {
+                    recentParties.pop();
+                }
+                
+                localStorage.setItem('recentParties', JSON.stringify(recentParties));
+                return partyData;
+            },
+            
+            getParty: function(partyId) {
+                const parties = JSON.parse(localStorage.getItem('watchParties'));
+                return parties.find(party => party.id === partyId);
+            },
+            
+            updateParty: function(partyId, updatedData) {
+                const parties = JSON.parse(localStorage.getItem('watchParties'));
+                const index = parties.findIndex(party => party.id === partyId);
+                if (index !== -1) {
+                    parties[index] = { ...parties[index], ...updatedData };
+                    localStorage.setItem('watchParties', JSON.stringify(parties));
+                    return true;
+                }
+                return false;
+            },
+            
+            addToLibrary: function(videoData) {
+                const library = JSON.parse(localStorage.getItem('videoLibrary'));
+                const exists = library.some(item => item.url === videoData.url);
+                if (!exists) {
+                    library.push(videoData);
+                    localStorage.setItem('videoLibrary', JSON.stringify(library));
+                    return true;
+                }
+                return false;
+            },
+            
+            getLibrary: function() {
+                return JSON.parse(localStorage.getItem('videoLibrary'));
+            },
+            
+            removeFromLibrary: function(index) {
+                const library = JSON.parse(localStorage.getItem('videoLibrary'));
+                if (index >= 0 && index < library.length) {
+                    library.splice(index, 1);
+                    localStorage.setItem('videoLibrary', JSON.stringify(library));
+                    return true;
+                }
+                return false;
+            },
+            
+            getRecentParties: function() {
+                return JSON.parse(localStorage.getItem('recentParties'));
+            },
+            
+            setHdTodaySession: function(data) {
+                localStorage.setItem('hdTodaySession', JSON.stringify(data));
+            },
+            
+            getHdTodaySession: function() {
+                return JSON.parse(localStorage.getItem('hdTodaySession'));
             }
         };
-
-        // Movie functions
-        const movieManager = {
-            loadMovies: () => {
-                const storedMovies = localStorage.getItem(LOCAL_STORAGE_KEYS.MOVIES);
-                state.movies = storedMovies ? JSON.parse(storedMovies) : state.mockMovies;
-                movieManager.updateMovieSelect();
+        
+        // Enhanced Utility functions
+        const Utils = {
+            generateId: function() {
+                return Math.random().toString(36).substring(2, 9);
             },
-            updateMovieSelect: () => {
-                elements.selectMovie.innerHTML = '<option value="">Select a movie</option>';
-                state.movies.forEach(movie => {
-                    const option = document.createElement('option');
-                    option.value = movie.id;
-                    option.textContent = movie.title;
-                    elements.selectMovie.appendChild(option);
+            
+            extractHdTodayData: function(url) {
+                // Simple validation for HD Today TV URL
+                if (!url.includes('hdtodaytv.tv')) {
+                    return null;
+                }
+                
+                // Try to extract title from URL (this would be better with an API)
+                const pathParts = url.split('/');
+                let title = pathParts[pathParts.length - 1];
+                title = title.replace(/-/g, ' ').replace(/\?.*$/, '');
+                title = title.charAt(0).toUpperCase() + title.slice(1);
+                
+                return {
+                    url: url,
+                    title: title
+                };
+            },
+            
+            formatTime: function(isoString) {
+                const date = new Date(isoString);
+                return date.toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
                 });
             },
-            uploadMovie: () => {
-                const title = elements.movieTitle.value.trim();
-                const file = elements.movieFile.files[0];
+            
+            showNotification: function(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white font-medium ${
+                    type === 'error' ? 'bg-red-500' : 
+                    type === 'success' ? 'bg-green-500' : 'bg-accent'
+                } z-50 smooth-transition`;
+                notification.textContent = message;
+                document.body.appendChild(notification);
                 
-                if (!title || !file) {
-                    alert(title ? 'Please select a movie file' : 'Please enter a movie title');
-                    return false;
-                }
-                
-                const newMovie = {
-                    id: utils.generateId('movie-'),
-                    title: title,
-                    url: URL.createObjectURL(file),
-                    thumbnail: elements.movieThumbnail.files[0] ? 
-                            URL.createObjectURL(elements.movieThumbnail.files[0]) : ''
-                };
-                
-                state.movies.push(newMovie);
-                localStorage.setItem(LOCAL_STORAGE_KEYS.MOVIES, JSON.stringify(state.movies));
-                movieManager.updateMovieSelect();
-                
-                utils.clearForm(elements.movieTitle);
-                utils.clearForm(elements.movieFile);
-                utils.clearForm(elements.movieThumbnail);
-                
-                return true;
+                setTimeout(() => {
+                    notification.classList.add('opacity-0');
+                    setTimeout(() => {
+                        notification.remove();
+                    }, 300);
+                }, 3000);
             }
         };
-
-        // Party functions
-        const partyManager = {
-            joinParty: (party) => {
-                state.currentParty = party;
-                state.isHost = party.isHost || false;
-                state.members = party.members || [];
+        
+        // Enhanced App state
+        const AppState = {
+            currentParty: null,
+            currentUser: null,
+            isHost: false,
+            syncInterval: null,
+            
+            init: function() {
+                DB.init();
+                this.loadRecentParties();
+                this.loadLibrary();
+                this.setupEventListeners();
+                this.checkForReturningUser();
+            },
+            
+            checkForReturningUser: function() {
+                const recentParties = DB.getRecentParties();
+                if (recentParties.length > 0) {
+                    const lastParty = recentParties[0];
+                    document.getElementById('party-id').placeholder = `e.g. ${lastParty.id}`;
+                    document.getElementById('guest-name').placeholder = `e.g. ${lastParty.host}`;
+                }
+            },
+            
+            loadRecentParties: function() {
+                const recentParties = DB.getRecentParties();
+                const container = document.getElementById('recent-parties-list');
+                container.innerHTML = '';
                 
-                localStorage.setItem(LOCAL_STORAGE_KEYS.CURRENT_PARTY, JSON.stringify(party));
+                if (recentParties.length === 0) {
+                    container.innerHTML = `
+                        <div class="col-span-full text-center py-8">
+                            <i class="fas fa-film text-4xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-500">No recent parties yet</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                recentParties.forEach(party => {
+                    const partyEl = document.createElement('div');
+                    partyEl.className = 'border rounded-xl p-4 hover:bg-gray-50 smooth-transition cursor-pointer';
+                    partyEl.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-medium text-primary truncate">${party.name}</h3>
+                            <span class="text-xs text-gray-500 whitespace-nowrap ml-2">${Utils.formatTime(party.timestamp)}</span>
+                        </div>
+                        <p class="text-sm text-gray-600 mb-1 truncate" title="${party.videoTitle}">
+                            <i class="fas fa-play-circle mr-1 text-accent"></i> ${party.videoTitle || 'HD Today TV Video'}
+                        </p>
+                        <p class="text-xs text-gray-500 mb-3">
+                            <i class="fas fa-crown mr-1 text-yellow-500"></i> ${party.host}
+                        </p>
+                        <button class="join-recent-party w-full bg-gray-100 hover:bg-accent hover:text-white text-sm py-2 px-4 rounded-lg smooth-transition" data-id="${party.id}">
+                            <i class="fas fa-sign-in-alt mr-1"></i> Join
+                        </button>
+                    `;
+                    container.appendChild(partyEl);
+                });
+            },
+            
+            loadLibrary: function() {
+                const library = DB.getLibrary();
+                const container = document.getElementById('library-list');
+                container.innerHTML = '';
+                
+                if (library.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-8">
+                            <i class="fas fa-video-slash text-4xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-500">Your library is empty</p>
+                            <p class="text-sm text-gray-400 mt-2">Add HD Today TV videos to get started</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                library.forEach((video, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'border rounded-lg p-3 hover:bg-gray-50 smooth-transition';
+                    item.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-primary truncate">${video.title || 'HD Today TV Video'}</p>
+                                <p class="text-xs text-gray-500 truncate">${video.url}</p>
+                            </div>
+                            <div class="flex space-x-2 ml-3">
+                                <button class="use-video text-white bg-accent hover:bg-secondary p-2 rounded-full smooth-transition" data-url="${video.url}" data-title="${video.title}" title="Use this video">
+                                    <i class="fas fa-play text-xs"></i>
+                                </button>
+                                <button class="remove-video text-white bg-red-500 hover:bg-red-600 p-2 rounded-full smooth-transition" data-index="${index}" title="Remove from library">
+                                    <i class="fas fa-trash text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+            },
+            
+            setupEventListeners: function() {
+                // Tab switching
+                document.getElementById('create-tab').addEventListener('click', () => this.switchTab('create'));
+                document.getElementById('join-tab').addEventListener('click', () => this.switchTab('join'));
+                document.getElementById('library-tab').addEventListener('click', () => this.switchTab('library'));
+                
+                // Create party
+                document.getElementById('create-party-btn').addEventListener('click', this.createParty.bind(this));
+                
+                // Join party
+                document.getElementById('join-party-btn').addEventListener('click', this.joinParty.bind(this));
+                
+                // Library
+                document.getElementById('add-to-library').addEventListener('click', this.addToLibrary.bind(this));
+                
+                // HD Today TV integration
+                document.getElementById('browse-hd-today').addEventListener('click', this.openHdTodayModal.bind(this));
+                document.getElementById('close-hd-modal').addEventListener('click', this.closeHdTodayModal.bind(this));
+                document.getElementById('select-hd-video').addEventListener('click', this.selectHdTodayVideo.bind(this));
+                
+                // Party room controls
+                document.getElementById('leave-party-btn').addEventListener('click', this.leaveParty.bind(this));
+                document.getElementById('play-btn').addEventListener('click', this.playVideo.bind(this));
+                document.getElementById('pause-btn').addEventListener('click', this.pauseVideo.bind(this));
+                document.getElementById('send-chat-btn').addEventListener('click', this.sendChatMessage.bind(this));
+                document.getElementById('chat-input').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.sendChatMessage();
+                });
+                
+                // Recent parties join buttons (delegated event)
+                document.getElementById('recent-parties-list').addEventListener('click', (e) => {
+                    if (e.target.classList.contains('join-recent-party') || 
+                        e.target.closest('.join-recent-party')) {
+                        const button = e.target.classList.contains('join-recent-party') ? 
+                            e.target : e.target.closest('.join-recent-party');
+                        const partyId = button.getAttribute('data-id');
+                        document.getElementById('party-id').value = partyId;
+                        this.switchTab('join');
+                        Utils.showNotification('Party ID copied to join form');
+                    }
+                });
+                
+                // Library item actions (delegated events)
+                document.getElementById('library-list').addEventListener('click', (e) => {
+                    // Use video button
+                    if (e.target.classList.contains('use-video') || 
+                        e.target.closest('.use-video')) {
+                        const button = e.target.classList.contains('use-video') ? 
+                            e.target : e.target.closest('.use-video');
+                        const url = button.getAttribute('data-url');
+                        const title = button.getAttribute('data-title');
+                        document.getElementById('video-url').value = url;
+                        this.switchTab('create');
+                        Utils.showNotification('Video URL copied to create form');
+                    }
+                    
+                    // Remove video button
+                    if (e.target.classList.contains('remove-video') || 
+                        e.target.closest('.remove-video')) {
+                        const button = e.target.classList.contains('remove-video') ? 
+                            e.target : e.target.closest('.remove-video');
+                        const index = parseInt(button.getAttribute('data-index'));
+                        this.removeFromLibrary(index);
+                    }
+                });
+            },
+            
+            switchTab: function(tab) {
+                // Hide all sections
+                document.getElementById('create-section').classList.add('hidden');
+                document.getElementById('join-section').classList.add('hidden');
+                document.getElementById('library-section').classList.add('hidden');
+                
+                // Reset active tabs
+                document.getElementById('create-tab').classList.remove('active-tab');
+                document.getElementById('join-tab').classList.remove('active-tab');
+                document.getElementById('library-tab').classList.remove('active-tab');
+                
+                // Show selected section and set active tab
+                if (tab === 'create') {
+                    document.getElementById('create-section').classList.remove('hidden');
+                    document.getElementById('create-tab').classList.add('active-tab');
+                } else if (tab === 'join') {
+                    document.getElementById('join-section').classList.remove('hidden');
+                    document.getElementById('join-tab').classList.add('active-tab');
+                } else if (tab === 'library') {
+                    document.getElementById('library-section').classList.remove('hidden');
+                    document.getElementById('library-tab').classList.add('active-tab');
+                }
+            },
+            
+            createParty: function() {
+                const partyName = document.getElementById('party-name').value.trim();
+                const hostName = document.getElementById('host-name').value.trim();
+                const videoUrl = document.getElementById('video-url').value.trim();
+                
+                if (!partyName || !hostName || !videoUrl) {
+                    Utils.showNotification('Please fill in all fields', 'error');
+                    return;
+                }
+                
+                const videoData = Utils.extractHdTodayData(videoUrl);
+                if (!videoData) {
+                    Utils.showNotification('Please enter a valid HD Today TV URL', 'error');
+                    return;
+                }
+                
+                const partyId = Utils.generateId();
+                
+                const partyData = {
+                    id: partyId,
+                    name: partyName,
+                    host: hostName,
+                    videoUrl: videoUrl,
+                    videoTitle: videoData.title,
+                    members: [hostName],
+                    chat: [],
+                    isPlaying: false,
+                    lastPosition: 0,
+                    createdAt: new Date().toISOString()
+                };
+                
+                DB.createParty(partyData);
+                this.enterParty(partyId, hostName, true);
+                Utils.showNotification('Party created successfully!', 'success');
+            },
+            
+            joinParty: function() {
+                const partyId = document.getElementById('party-id').value.trim();
+                const guestName = document.getElementById('guest-name').value.trim();
+                
+                if (!partyId || !guestName) {
+                    Utils.showNotification('Please fill in all fields', 'error');
+                    return;
+                }
+                
+                const party = DB.getParty(partyId);
+                
+                if (!party) {
+                    Utils.showNotification('Party not found', 'error');
+                    return;
+                }
+                
+                // Add user to members list if not already there
+                if (!party.members.includes(guestName)) {
+                    party.members.push(guestName);
+                    DB.updateParty(partyId, { members: party.members });
+                }
+                
+                this.enterParty(partyId, guestName, false);
+                Utils.showNotification(`Joined ${party.name} successfully!`, 'success');
+            },
+            
+            enterParty: function(partyId, userName, isHost) {
+                const party = DB.getParty(partyId);
+                
+                if (!party) {
+                    Utils.showNotification('Party not found', 'error');
+                    return;
+                }
+                
+                this.currentParty = party;
+                this.currentUser = userName;
+                this.isHost = isHost;
                 
                 // Update UI
-                elements.partySection.classList.remove('hidden');
-                elements.homeContent.classList.add('hidden');
+                document.getElementById('party-name-display').textContent = party.name;
+                document.getElementById('party-id-display').innerHTML = `Party ID: <span class="font-mono bg-gray-100 px-2 py-1 rounded">${party.id}</span>`;
+                document.getElementById('party-host').innerHTML = `<i class="fas fa-crown text-yellow-500 mr-1"></i> <span class="font-medium">Host:</span> <span class="font-mono">${party.host}</span>`;
+                document.getElementById('party-members').innerHTML = `<i class="fas fa-users mr-1"></i> <span class="font-medium">Members:</span> <span class="font-mono">${party.members.join(', ')}</span>`;
                 
-                elements.partyId.textContent = party.id;
-                elements.partyMembers.textContent = state.members.length;
-                elements.partyMovie.textContent = party.movie.title;
+                // Set up video player
+                const player = document.getElementById('video-player');
+                player.src = party.videoUrl;
                 
-                // Set up video
-                elements.partyVideo.src = party.movie.url;
-                elements.partyVideo.load();
+                // Load chat messages
+                this.loadChatMessages();
                 
-                // Set invite link
-                elements.inviteLink.value = `${window.location.origin}?party=${party.id}`;
+                // Hide other sections and show party room
+                document.getElementById('create-section').classList.add('hidden');
+                document.getElementById('join-section').classList.add('hidden');
+                document.getElementById('library-section').classList.add('hidden');
+                document.getElementById('party-room').classList.remove('hidden');
                 
-                // Connect to WebSocket
-                partyManager.connectWebSocket();
+                // Scroll to top
+                window.scrollTo(0, 0);
                 
-                // Start video sync
-                partyManager.startVideoSync();
-            },
-            createParty: (name, movieId) => {
-                const selectedMovie = state.movies.find(m => m.id === movieId);
-                if (!selectedMovie) return false;
-                
-                const newParty = {
-                    id: utils.generateId('party-'),
-                    name: name,
-                    movie: selectedMovie,
-                    members: [{ id: 'user1', name: 'You (Host)' }],
-                    isHost: true
-                };
-                
-                partyManager.joinParty(newParty);
-                return true;
-            },
-            connectWebSocket: () => {
-                // Mock WebSocket for demo
-                state.socket = {
-                    send: (data) => console.log('WebSocket send:', data),
-                    close: () => console.log('WebSocket closed')
-                };
-                
-                // Simulate receiving messages
-                setInterval(() => {
-                    if (Math.random() > 0.7) {
-                        const randomMessage = {
-                            ...state.mockMessages[Math.floor(Math.random() * state.mockMessages.length)]
-                        };
-                        if (randomMessage.type === 'sync') {
-                            randomMessage.time = elements.partyVideo.currentTime + 0.5;
-                        }
-                        partyManager.handleSocketMessage({ data: JSON.stringify(randomMessage) });
-                    }
-                }, 5000);
-            },
-            handleSocketMessage: (event) => {
-                const data = JSON.parse(event.data);
-                
-                switch (data.type) {
-                    case 'chat':
-                        chatManager.addMessage(data.user, data.message);
-                        break;
-                    case 'sync':
-                        if (!state.isHost) {
-                            elements.partyVideo.currentTime = data.time;
-                        }
-                        break;
-                    case 'play':
-                        if (!state.isHost) {
-                            elements.partyVideo.play();
-                        }
-                        break;
-                    case 'pause':
-                        if (!state.isHost) {
-                            elements.partyVideo.pause();
-                        }
-                        break;
-                    case 'members':
-                        state.members = data.members;
-                        elements.partyMembers.textContent = state.members.length;
-                        break;
+                // Simulate sync with host (in a real app, this would be done with WebSockets)
+                if (this.isHost) {
+                    if (this.syncInterval) clearInterval(this.syncInterval);
+                    this.syncInterval = setInterval(() => {
+                        this.syncPartyState();
+                    }, 3000);
                 }
             },
-            startVideoSync: () => {
-                if (state.videoInterval) clearInterval(state.videoInterval);
-                
-                state.videoInterval = setInterval(() => {
-                    if (state.isHost && elements.partyVideo.readyState > 0) {
-                        state.socket.send(JSON.stringify({
-                            type: 'sync',
-                            time: elements.partyVideo.currentTime
-                        }));
-                    }
-                }, 1000);
-            },
-            leaveParty: () => {
-                if (confirm('Are you sure you want to leave the party?')) {
-                    if (state.socket) state.socket.close();
-                    if (state.videoInterval) clearInterval(state.videoInterval);
-                    
-                    elements.partyVideo.pause();
-                    elements.partyVideo.src = '';
-                    
-                    state.currentParty = null;
-                    state.isHost = false;
-                    state.members = [];
-                    
-                    localStorage.removeItem(LOCAL_STORAGE_KEYS.CURRENT_PARTY);
-                    
-                    elements.partySection.classList.add('hidden');
-                    elements.homeContent.classList.remove('hidden');
-                    elements.chatMessages.innerHTML = '';
+            
+            leaveParty: function() {
+                if (this.syncInterval) {
+                    clearInterval(this.syncInterval);
+                    this.syncInterval = null;
                 }
-            }
-        };
-
-        // Chat functions
-        const chatManager = {
-            addMessage: (user, message) => {
-                const messageElement = document.createElement('div');
-                messageElement.className = 'bg-gray-700 p-2 rounded';
-                messageElement.innerHTML = `<strong class="text-indigo-400">${user}:</strong> ${message}`;
-                elements.chatMessages.appendChild(messageElement);
-                elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+                
+                this.currentParty = null;
+                this.currentUser = null;
+                this.isHost = false;
+                
+                // Clear video player
+                document.getElementById('video-player').src = '';
+                
+                // Hide party room and show create section
+                document.getElementById('party-room').classList.add('hidden');
+                this.switchTab('create');
+                
+                // Reload recent parties
+                this.loadRecentParties();
+                
+                Utils.showNotification('You left the party', 'info');
             },
-            sendMessage: () => {
-                const message = elements.chatInput.value.trim();
+            
+            playVideo: function() {
+                if (this.isHost) {
+                    DB.updateParty(this.currentParty.id, { isPlaying: true });
+                    Utils.showNotification('Play command sent to all members');
+                }
+                // Note: In a real implementation, this would control the iframe player
+            },
+            
+            pauseVideo: function() {
+                if (this.isHost) {
+                    DB.updateParty(this.currentParty.id, { isPlaying: false });
+                    Utils.showNotification('Pause command sent to all members');
+                }
+                // Note: In a real implementation, this would control the iframe player
+            },
+            
+            syncPartyState: function() {
+                // In a real app, this would sync playback state between all clients
+                const party = DB.getParty(this.currentParty.id);
+                // Update UI based on current party state
+            },
+            
+            sendChatMessage: function() {
+                const input = document.getElementById('chat-input');
+                const message = input.value.trim();
+                
                 if (!message) return;
                 
-                state.socket.send(JSON.stringify({
-                    type: 'chat',
-                    user: 'You',
-                    message: message
-                }));
-                
-                chatManager.addMessage('You', message);
-                elements.chatInput.value = '';
-            }
-        };
-
-        // Video functions
-        const videoManager = {
-            togglePlayPause: () => {
-                if (elements.partyVideo.paused) {
-                    elements.partyVideo.play();
-                    if (state.isHost) {
-                        state.socket.send(JSON.stringify({ type: 'play' }));
-                    }
-                } else {
-                    elements.partyVideo.pause();
-                    if (state.isHost) {
-                        state.socket.send(JSON.stringify({ type: 'pause' }));
-                    }
-                }
-            },
-            syncVideo: () => {
-                if (!state.isHost) {
-                    state.socket.send(JSON.stringify({ type: 'requestSync' }));
-                    alert('Video synced with host');
-                } else {
-                    alert('You are the host, others will sync with you');
-                }
-            },
-            handleVideoPlay: () => {
-                elements.playPauseBtn.innerHTML = '<i class="fas fa-pause"></i> Pause';
-            },
-            handleVideoPause: () => {
-                elements.playPauseBtn.innerHTML = '<i class="fas fa-play"></i> Play';
-            },
-            updateVideoProgress: () => {
-                const percent = (elements.partyVideo.currentTime / elements.partyVideo.duration) * 100;
-                elements.progressBar.style.width = `${percent}%`;
-                elements.currentTime.textContent = utils.formatTime(elements.partyVideo.currentTime);
-            },
-            updateVideoDuration: () => {
-                elements.duration.textContent = utils.formatTime(elements.partyVideo.duration);
-            }
-        };
-
-        // Event handlers
-        const eventHandlers = {
-            handleJoinParty: () => {
-                const code = elements.partyCode.value.trim();
-                if (!code) {
-                    alert('Please enter a party code');
-                    return;
-                }
-                
-                const mockParty = {
-                    id: code,
-                    name: "Demo Party",
-                    movie: state.movies[0],
-                    members: [{ id: 'user1', name: 'You' }]
+                const chatMessage = {
+                    sender: this.currentUser,
+                    text: message,
+                    timestamp: new Date().toISOString()
                 };
                 
-                partyManager.joinParty(mockParty);
-                utils.toggleModal(elements.joinPartyModal, false);
-                utils.clearForm(elements.partyCode);
-            },
-            handleCreateParty: () => {
-                const name = elements.partyName.value.trim();
-                const movieId = elements.selectMovie.value;
+                // Add message to party chat
+                const party = DB.getParty(this.currentParty.id);
+                party.chat.push(chatMessage);
+                DB.updateParty(this.currentParty.id, { chat: party.chat });
                 
-                if (!name || !movieId) {
-                    alert(name ? 'Please select a movie' : 'Please enter a party name');
+                // Add message to UI
+                this.addChatMessage(chatMessage);
+                
+                // Clear input
+                input.value = '';
+                input.focus();
+            },
+            
+            addChatMessage: function(message) {
+                const container = document.getElementById('chat-messages');
+                const isCurrentUser = message.sender === this.currentUser;
+                
+                const messageEl = document.createElement('div');
+                messageEl.className = `chat-message ${isCurrentUser ? 'text-right' : 'text-left'}`;
+                messageEl.innerHTML = `
+                    <div class="inline-block max-w-xs md:max-w-md lg:max-w-lg xl:max-w-xl text-left">
+                        <div class="text-xs ${isCurrentUser ? 'text-accent' : 'text-gray-600'} mb-1">
+                            ${isCurrentUser ? 'You' : message.sender}
+                        </div>
+                        <div class="px-4 py-2 rounded-lg ${isCurrentUser ? 'bg-accent text-white' : 'bg-gray-100 text-gray-800'}">
+                            ${message.text}
+                        </div>
+                        <div class="text-xs text-gray-400 mt-1">
+                            ${Utils.formatTime(message.timestamp)}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(messageEl);
+                container.scrollTop = container.scrollHeight;
+            },
+            
+            loadChatMessages: function() {
+                const container = document.getElementById('chat-messages');
+                container.innerHTML = '';
+                
+                if (this.currentParty.chat.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-8 text-gray-400">
+                            <i class="fas fa-comment-slash text-2xl mb-2"></i>
+                            <p>No messages yet</p>
+                            <p class="text-sm mt-2">Send a message to start the conversation</p>
+                        </div>
+                    `;
                     return;
                 }
                 
-                if (partyManager.createParty(name, movieId)) {
-                    utils.toggleModal(elements.createPartyModal, false);
-                    utils.clearForm(elements.partyName);
-                    utils.clearForm(elements.selectMovie);
+                this.currentParty.chat.forEach(message => {
+                    this.addChatMessage(message);
+                });
+            },
+            
+            addToLibrary: function() {
+                const url = document.getElementById('upload-video').value.trim();
+                
+                if (!url) {
+                    Utils.showNotification('Please enter a video URL', 'error');
+                    return;
+                }
+                
+                const videoData = Utils.extractHdTodayData(url);
+                if (!videoData) {
+                    Utils.showNotification('Please enter a valid HD Today TV URL', 'error');
+                    return;
+                }
+                
+                if (DB.addToLibrary(videoData)) {
+                    this.loadLibrary();
+                    document.getElementById('upload-video').value = '';
+                    Utils.showNotification('Video added to library', 'success');
+                } else {
+                    Utils.showNotification('This video is already in your library', 'info');
                 }
             },
-            handleUploadMovie: () => {
-                if (movieManager.uploadMovie()) {
-                    utils.toggleModal(elements.uploadModal, false);
-                    alert('Movie uploaded successfully!');
+            
+            removeFromLibrary: function(index) {
+                if (DB.removeFromLibrary(index)) {
+                    this.loadLibrary();
+                    Utils.showNotification('Video removed from library', 'success');
                 }
             },
-            copyInviteLink: () => {
-                elements.inviteLink.select();
-                document.execCommand('copy');
-                alert('Invite link copied to clipboard!');
+            
+            openHdTodayModal: function() {
+                document.getElementById('hd-today-modal').classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            },
+            
+            closeHdTodayModal: function() {
+                document.getElementById('hd-today-modal').classList.add('hidden');
+                document.body.style.overflow = '';
+            },
+            
+            selectHdTodayVideo: function() {
+                // In a real implementation, this would get the current URL from the iframe
+                // For demo purposes, we'll simulate a selection
+                const demoUrl = 'https://www.hdtodaytv.tv/watch/movie-title';
+                const demoTitle = 'Movie Title';
+                
+                DB.setHdTodaySession({
+                    lastSelectedUrl: demoUrl,
+                    lastSelectedTitle: demoTitle
+                });
+                
+                document.getElementById('video-url').value = demoUrl;
+                this.closeHdTodayModal();
+                Utils.showNotification('Video URL selected');
             }
         };
-
-        // Initialize event listeners
-        const initEventListeners = () => {
-            // Modal buttons
-            elements.uploadBtn.addEventListener('click', () => utils.toggleModal(elements.uploadModal, true));
-            elements.createPartyBtn.addEventListener('click', () => utils.toggleModal(elements.createPartyModal, true));
-            elements.createPartyBtn2.addEventListener('click', () => utils.toggleModal(elements.createPartyModal, true));
-            elements.joinPartyBtn.addEventListener('click', () => utils.toggleModal(elements.joinPartyModal, true));
-            
-            // Modal actions
-            elements.cancelJoinBtn.addEventListener('click', () => utils.toggleModal(elements.joinPartyModal, false));
-            elements.confirmJoinBtn.addEventListener('click', eventHandlers.handleJoinParty);
-            elements.cancelCreateBtn.addEventListener('click', () => utils.toggleModal(elements.createPartyModal, false));
-            elements.confirmCreateBtn.addEventListener('click', eventHandlers.handleCreateParty);
-            elements.cancelUploadBtn.addEventListener('click', () => utils.toggleModal(elements.uploadModal, false));
-            elements.confirmUploadBtn.addEventListener('click', eventHandlers.handleUploadMovie);
-            
-            // Party controls
-            elements.playPauseBtn.addEventListener('click', videoManager.togglePlayPause);
-            elements.syncBtn.addEventListener('click', videoManager.syncVideo);
-            elements.leavePartyBtn.addEventListener('click', partyManager.leaveParty);
-            elements.copyInviteBtn.addEventListener('click', eventHandlers.copyInviteLink);
-            
-            // Chat
-            elements.sendMessageBtn.addEventListener('click', chatManager.sendMessage);
-            elements.chatInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') chatManager.sendMessage();
-            });
-            
-            // Video events
-            elements.partyVideo.addEventListener('play', videoManager.handleVideoPlay);
-            elements.partyVideo.addEventListener('pause', videoManager.handleVideoPause);
-            elements.partyVideo.addEventListener('timeupdate', videoManager.updateVideoProgress);
-            elements.partyVideo.addEventListener('loadedmetadata', videoManager.updateVideoDuration);
-        };
-
+        
         // Initialize the app
-        const init = () => {
-            movieManager.loadMovies();
-            
-            // Check if rejoining a party
-            const storedParty = localStorage.getItem(LOCAL_STORAGE_KEYS.CURRENT_PARTY);
-            if (storedParty) {
-                partyManager.joinParty(JSON.parse(storedParty));
-            }
-            
-            initEventListeners();
-        };
-
-        // Start the app
-        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('DOMContentLoaded', () => {
+            AppState.init();
+        });
     </script>
-   
 </body>
 </html>
-
-
-
-
-http://127.0.0.1:5500?
